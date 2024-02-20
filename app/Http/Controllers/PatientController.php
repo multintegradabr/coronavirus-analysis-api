@@ -10,6 +10,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response as HttpStatus;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Request;
+use LaravelLegends\PtBrValidator\Rules\Cpf;
 
 class PatientController extends Controller
 {
@@ -42,6 +44,39 @@ class PatientController extends Controller
 
         return new PatientResource($user);
     }
+    
+        public function update(Request $request, Patient $patient): JsonResource
+    {
+        $request->validate([
+            'name' => 'required|string',
+            'identifier' => [
+                'required',
+                'string',
+                new Cpf(),
+            ],
+            'phone_number' => [
+                'required',
+                'string',
+            ],
+            'birthdate' => 'required|date',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg',
+        ]);
+
+        $data = $request->all();
+            
+        $imageName = time() . '.' . $request->image->extension();
+        Storage::disk('public')->putFileAs('images', $request->image, $imageName);
+        $data['image'] = 'images/' . $imageName;
+
+        if($patient->image){
+            Storage::disk('public')->delete($patient->image)
+        }
+            
+        $patient->update($data);
+
+        return new PatientResource($patient);
+    }
+
 
     public function destroy(int $user): JsonResponse
     {
